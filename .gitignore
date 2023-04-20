@@ -1,9 +1,14 @@
 # local .terraform dir
-.terraform/*
-
+**/.terraform/*
+mo
 # terraform state files
 *.tfstate
 *.tfstate.*
 
 # tf variable files
 *.tfvars
+
+.*.lock.hcl
+.DS_Stort
+.terraformrc
+terraform.rc

@@ -1,31 +1,28 @@
 
 provider "aws" {}
 
-variable "vpc_cidr_block" {}
-variable "subnet_cidr_block" {}
-
-resource "aws_vpc" "developmentrt-vpc" {
+resource "aws_vpc" "myapp-vpc" {
   cidr_block = var.vpc_cidr_block
   tags = {
-    Name = "development"
+    Name = "${var.env_prefix}-vpc"
   }
 }
 
-resource "aws_subnet" "dev-subnet-1" {
-  vpc_id            = aws_vpc.developmentrt-vpc.id
-  cidr_block        = var.subnet_cidr_block
-  availability_zone = "us-east-1a"
-  tags = {
-    Name = "subnet-1-dev"
-  }
+module "myapp-subnet" {
+  source            = "./modules/subnet"
+  vpc_id            = aws_vpc.myapp-vpc.id
+  subnet_cidr_block = var.subnet_cidr_block
+  avail_zone        = var.avail_zone
+  env_prefix        = var.env_prefix
 }
 
-
-output "vpc-d" {
-  value = aws_vpc.developmentrt-vpc.id
+module "myapp-server" {
+  source        = "./modules/webserver"
+  vpc_id        = aws_vpc.myapp-vpc.id
+  my_ip         = var.my_ip
+  env_prefix    = var.env_prefix
+  instance_type = var.instance_type
+  avail_zone    = var.avail_zone
+  image_name    = var.image_name
+  subnet_id     = module.myapp-subnet.subnet.id
 }
-
-output "subnet" {
-  value = aws_subnet.dev-subnet-1.id
-}
-

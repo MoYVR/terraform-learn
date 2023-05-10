@@ -2,39 +2,51 @@ provider "aws" {
     region = "us-west-1"
 }
 
-variable vpc_cidr_block {}
-variable private_subnet_cidr_blocks {}
-variable public_subnet_cidr_blocks {}
+variable cidr_blocks {
+    description = "cidr blocks and name tags for vpc and subnets"
+    type = list(object({
+        cidr_block = string
+        name = string
+    }))
+}
 
-data "aws_availability_zones" "available" {}
+variable avail_zone {
+    default = "eu-west-3a"
+}
 
-
-module "myapp-vpc" {
-    source = "terraform-aws-modules/vpc/aws"
-    version = "2.64.0"
-
-    name = "myapp-vpc"
-    cidr = var.vpc_cidr_block
-    private_subnets = var.private_subnet_cidr_blocks
-    public_subnets = var.public_subnet_cidr_blocks
-    azs = data.aws_availability_zones.available.names 
-    
-    enable_nat_gateway = true
-    single_nat_gateway = true
-    enable_dns_hostnames = true
-
+resource "aws_vpc" "myapp-vpc" {
+    cidr_block = var.cidr_blocks[0].cidr_block
     tags = {
-        "kubernetes.io/cluster/myapp-eks-cluster" = "shared"
+        Name = var.cidr_blocks[0].name
     }
+}
 
-    public_subnet_tags = {
-        "kubernetes.io/cluster/myapp-eks-cluster" = "shared"
-        "kubernetes.io/role/elb" = 1 
+resource "aws_subnet" "myapp-subnet-1" {
+    vpc_id = aws_vpc.myapp-vpc.id
+    cidr_block = var.cidr_blocks[1].cidr_block
+    availability_zone = var.avail_zone
+    tags = {
+        Name = var.cidr_blocks[1].name
     }
+}
 
-    private_subnet_tags = {
-        "kubernetes.io/cluster/myapp-eks-cluster" = "shared"
-        "kubernetes.io/role/internal-elb" = 1 
+output "dev-vpc-id" {
+    value = aws_vpc.development-vpc.id
+}
+
+output "dev-subnet-id" {
+    value = aws_subnet.dev-subnet-1.id
+}
+
+data "aws_vpc" "existing_vpc" {
+    default = true
+}
+
+resource "aws_subnet" "dev-subnet-2" {
+    vpc_id = data.aws_vpc.existing_vpc.id
+    cidr_block = "172.31.48.0/20"
+    availability_zone = "eu-west-3a"
+    tags = {
+        Name = "subnet-2-default"
     }
-
 }
